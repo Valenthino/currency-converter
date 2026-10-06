@@ -1,0 +1,14 @@
+node_modules
+.next
+.git
+.gitignore
+.dockerignore
+Dockerfile
+npm-debug.log*
+.env*
+.vercel
+*.tsbuildinfo
+.DS_Store
+docs
+.claude-run.err
+.claude-run.json
