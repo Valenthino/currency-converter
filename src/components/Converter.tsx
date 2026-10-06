@@ -8,9 +8,9 @@ import {
   formatAmountDisplay,
   formatUpdatedAt,
   sanitizeAmountInput,
-  trimToPlainNumber,
+  toPlainDecimalString,
 } from "@/lib/currency";
-import { defaultState, loadState, saveState, type StoredState } from "@/lib/storage";
+import { DEFAULT_SELECTED, defaultState, loadState, saveState, type StoredState } from "@/lib/storage";
 import { CurrencyRow } from "@/components/CurrencyRow";
 import { CurrencyPicker } from "@/components/CurrencyPicker";
 
@@ -55,6 +55,20 @@ export function Converter() {
     };
   }, []);
 
+  // Reconcile persisted codes against what the rates payload actually knows
+  // about — a stale/corrupt saved code (renamed, typo'd, or malicious) must
+  // never reach formatting/lookup code as a live selection. Adjusted during
+  // render (not an effect) per https://react.dev/learn/you-might-not-need-an-effect#adjusting-some-state-when-a-prop-changes
+  const [reconciledWith, setReconciledWith] = useState<RatesPayload | null>(null);
+  if (hydrated && rates && rates !== reconciledWith) {
+    setReconciledWith(rates);
+    const known = state.selected.filter((c) => Object.hasOwn(rates.rates, c));
+    if (known.length !== state.selected.length) {
+      const selected = known.length > 0 ? known : DEFAULT_SELECTED;
+      setState((s) => ({ ...s, selected: selected.includes(s.base) ? selected : [s.base, ...selected] }));
+    }
+  }
+
   const amountValue = parseFloat(state.amount) || 0;
 
   const handleAmountChange = useCallback((raw: string) => {
@@ -65,10 +79,14 @@ export function Converter() {
     (code: string) => {
       setState((s) => {
         if (code === s.base) return s;
-        if (!rates) return { ...s, base: code };
+        // F7: the base must always be a member of `selected` (reload path invariant).
+        const selected = s.selected.includes(code) ? s.selected : [...s.selected, code];
+        if (!rates || !Object.hasOwn(rates.rates, code) || !Object.hasOwn(rates.rates, s.base)) {
+          return { ...s, base: code, selected };
+        }
         const rate = rates.rates[code] / rates.rates[s.base];
         const current = parseFloat(s.amount) || 0;
-        return { ...s, base: code, amount: trimToPlainNumber(current * rate) };
+        return { ...s, base: code, selected, amount: toPlainDecimalString(current * rate) };
       });
     },
     [rates],
@@ -96,11 +114,12 @@ export function Converter() {
   }, []);
 
   const rows = useMemo(() => {
-    if (!rates) return [];
+    if (!rates || !Object.hasOwn(rates.rates, state.base)) return [];
+    const baseRate = rates.rates[state.base];
     return state.selected
-      .filter((code) => code !== state.base && rates.rates[code] != null)
+      .filter((code) => code !== state.base && Object.hasOwn(rates.rates, code))
       .map((code) => {
-        const unitRate = rates.rates[code] / rates.rates[state.base];
+        const unitRate = rates.rates[code] / baseRate;
         return { code, unitRate, converted: amountValue * unitRate };
       });
   }, [rates, state.selected, state.base, amountValue]);
@@ -120,47 +139,57 @@ export function Converter() {
           )}
         </div>
 
-        <div className="flex flex-col gap-3">
-          <button
-            type="button"
-            onClick={openBasePicker}
-            aria-haspopup="dialog"
-            className="inline-flex w-fit items-center gap-1 rounded-full bg-[var(--surface)] px-3 py-1.5 text-sm font-semibold transition-[background-color,transform] active:scale-[0.97] hover:bg-[var(--surface-hover)]"
-          >
-            {state.base}
-            <svg aria-hidden viewBox="0 0 20 20" className="h-3 w-3 text-muted">
-              <path
-                d="M5 7l5 5 5-5"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="1.6"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </svg>
-          </button>
+        {hydrated ? (
+          <div className="flex flex-col gap-3">
+            <button
+              type="button"
+              onClick={openBasePicker}
+              aria-haspopup="dialog"
+              className="inline-flex w-fit items-center gap-1 rounded-full bg-[var(--surface)] px-3 py-1.5 text-sm font-semibold transition-[background-color,transform] active:scale-[0.97] hover:bg-[var(--surface-hover)]"
+            >
+              {state.base}
+              <svg aria-hidden viewBox="0 0 20 20" className="h-3 w-3 text-muted">
+                <path
+                  d="M5 7l5 5 5-5"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.6"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+            </button>
 
-          <div className="flex min-w-0 items-baseline gap-2">
-            <span className="shrink-0 text-xl font-medium text-muted sm:text-2xl" aria-hidden>
-              {currencyMarker(state.base)}
-            </span>
-            <input
-              id="amount"
-              inputMode="decimal"
-              autoComplete="off"
-              aria-label={`Amount in ${currencyName(state.base)}`}
-              value={amountFocused ? state.amount : formatAmountDisplay(state.amount)}
-              onChange={(e) => handleAmountChange(e.target.value)}
-              onFocus={() => setAmountFocused(true)}
-              onBlur={() => setAmountFocused(false)}
-              className="min-w-0 flex-1 bg-transparent text-[clamp(1.6rem,8.5vw,4.5rem)] font-semibold tabular-nums tracking-tight outline-none"
-            />
+            <div className="flex min-w-0 items-baseline gap-2">
+              <span className="shrink-0 text-xl font-medium text-muted sm:text-2xl" aria-hidden>
+                {currencyMarker(state.base)}
+              </span>
+              <input
+                id="amount"
+                inputMode="decimal"
+                autoComplete="off"
+                aria-label={`Amount in ${currencyName(state.base)}`}
+                value={amountFocused ? state.amount : formatAmountDisplay(state.amount)}
+                onChange={(e) => handleAmountChange(e.target.value)}
+                onFocus={() => setAmountFocused(true)}
+                onBlur={() => setAmountFocused(false)}
+                className="min-w-0 flex-1 bg-transparent text-[clamp(1.6rem,8.5vw,4.5rem)] font-semibold tabular-nums tracking-tight outline-none"
+              />
+            </div>
           </div>
-        </div>
+        ) : (
+          // Preference-dependent (saved base/amount aren't known until localStorage
+          // loads post-mount) — a stable skeleton avoids a default→saved value flash
+          // (FR7) while keeping SSR and first client paint identical (no hydration mismatch).
+          <div className="flex flex-col gap-3" aria-hidden>
+            <div className="h-7 w-16 animate-pulse rounded-full bg-[var(--surface)]" />
+            <div className="h-[clamp(2.6rem,8.5vw,5rem)] w-2/3 animate-pulse rounded-xl bg-[var(--surface)]" />
+          </div>
+        )}
       </header>
 
       <section aria-label="Converted amounts" className="flex flex-col">
-        {!rates && !ratesError && (
+        {(!hydrated || !rates) && !ratesError && (
           <p className="py-8 text-center text-sm text-muted">Loading rates…</p>
         )}
         {ratesError && !rates && (
@@ -168,7 +197,7 @@ export function Converter() {
             Couldn&apos;t load rates. Check your connection and reload.
           </p>
         )}
-        {rates && rows.length > 0 && (
+        {hydrated && rates && rows.length > 0 && (
           <ul
             aria-live="polite"
             className="overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--surface)]"

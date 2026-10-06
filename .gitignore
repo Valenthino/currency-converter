@@ -44,3 +44,4 @@ next-env.d.ts
 .v*-*.log
 .claude-*.json
 .claude-*.err
+.codex-review.log

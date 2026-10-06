@@ -2,6 +2,8 @@ import seed from "@/data/rates-seed.json";
 
 const UPSTREAM_URL = "https://open.er-api.com/v6/latest/USD";
 const TTL_MS = 6 * 60 * 60 * 1000; // 6h, per spec
+const RETRY_COOLDOWN_MS = 60 * 1000;
+const REQUIRED_CODES = ["USD", "CAD", "XOF", "AED", "EUR"];
 
 export type RatesPayload = {
   base: string;
@@ -22,6 +24,8 @@ type UpstreamResponse = {
 // ponytail: module-level singleton cache, per server instance — fine for a single-region personal app.
 let cached: RatesPayload | null = null;
 let cachedAt = 0;
+let lastFailureAt = 0;
+let inFlight: Promise<RatesPayload> | null = null;
 
 function toIso(httpDate: string): string {
   const date = new Date(httpDate);
@@ -39,13 +43,24 @@ function fromSeed(): RatesPayload {
   };
 }
 
+function isValidPayload(data: UpstreamResponse): boolean {
+  if (data.result !== "success" || !data.rates || typeof data.rates !== "object") return false;
+  for (const code of REQUIRED_CODES) {
+    if (!Object.hasOwn(data.rates, code)) return false;
+  }
+  for (const value of Object.values(data.rates)) {
+    if (typeof value !== "number" || !Number.isFinite(value) || value <= 0) return false;
+  }
+  if (Number.isNaN(new Date(data.time_last_update_utc).getTime())) return false;
+  if (Number.isNaN(new Date(data.time_next_update_utc).getTime())) return false;
+  return true;
+}
+
 async function fetchLive(): Promise<RatesPayload> {
   const res = await fetch(UPSTREAM_URL, { signal: AbortSignal.timeout(8000) });
   if (!res.ok) throw new Error(`upstream responded ${res.status}`);
   const data = (await res.json()) as UpstreamResponse;
-  if (data.result !== "success" || !data.rates?.USD) {
-    throw new Error("unexpected upstream payload");
-  }
+  if (!isValidPayload(data)) throw new Error("invalid upstream payload");
   return {
     base: "USD",
     updated_at: toIso(data.time_last_update_utc),
@@ -56,20 +71,31 @@ async function fetchLive(): Promise<RatesPayload> {
   };
 }
 
-export async function getRates(): Promise<RatesPayload> {
-  const now = Date.now();
-  if (cached && now - cachedAt < TTL_MS) {
-    return cached;
-  }
+function fallback(): RatesPayload {
+  return cached ? { ...cached, source: "stale", stale: true } : fromSeed();
+}
+
+async function refresh(): Promise<RatesPayload> {
   try {
     const fresh = await fetchLive();
     cached = fresh;
-    cachedAt = now;
+    cachedAt = Date.now();
+    lastFailureAt = 0;
     return fresh;
   } catch {
-    if (cached) {
-      return { ...cached, source: "stale", stale: true };
-    }
-    return fromSeed();
+    lastFailureAt = Date.now();
+    return fallback();
   }
+}
+
+export async function getRates(): Promise<RatesPayload> {
+  const now = Date.now();
+  if (cached && now - cachedAt < TTL_MS) return cached;
+  if (now - lastFailureAt < RETRY_COOLDOWN_MS) return fallback();
+  if (!inFlight) {
+    inFlight = refresh().finally(() => {
+      inFlight = null;
+    });
+  }
+  return inFlight;
 }

@@ -114,6 +114,16 @@ export function CurrencyPicker({
                   type="button"
                   disabled={isBase}
                   onClick={() => handlePick(code)}
+                  aria-pressed={mode === "manage" && !isBase ? isSelected : undefined}
+                  aria-label={
+                    isBase
+                      ? `${currencyName(code)} (current base)`
+                      : mode === "base"
+                        ? `Set ${currencyName(code)} as base currency`
+                        : isSelected
+                          ? `Remove ${currencyName(code)} from selected currencies`
+                          : `Add ${currencyName(code)} to selected currencies`
+                  }
                   className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left transition-colors hover:bg-[var(--surface-hover)] disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   <span className="flex flex-col">

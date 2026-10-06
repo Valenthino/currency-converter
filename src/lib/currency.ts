@@ -18,7 +18,7 @@ function getDisplayNames(): Intl.DisplayNames {
 }
 
 export function currencyName(code: string): string {
-  if (NAME_OVERRIDES[code]) return NAME_OVERRIDES[code];
+  if (Object.hasOwn(NAME_OVERRIDES, code)) return NAME_OVERRIDES[code];
   try {
     const name = getDisplayNames().of(code);
     return name && name !== code ? name : code;
@@ -73,10 +73,15 @@ export function formatAmountDisplay(raw: string): string {
   return value.toLocaleString("en", { maximumFractionDigits: 2 });
 }
 
-/** Plain editable decimal string for an amount re-based after a tap, e.g. "585.06". */
-export function trimToPlainNumber(value: number): string {
-  if (!Number.isFinite(value)) return "0";
-  const trimmed = value.toFixed(6).replace(/\.?0+$/, "");
+/**
+ * Full-precision plain decimal string for an amount re-based after a tap
+ * (e.g. "0.00000017092"). Rebasing must not destructively round the stored
+ * amount — only display formatting rounds; this keeps round-trips (A→B→A)
+ * accurate for tiny amounts in high-ratio currency pairs.
+ */
+export function toPlainDecimalString(value: number): string {
+  if (!Number.isFinite(value) || value === 0) return "0";
+  const trimmed = value.toFixed(20).replace(/(\.\d*?)0+$/, "$1").replace(/\.$/, "");
   return trimmed === "" || trimmed === "-" ? "0" : trimmed;
 }
 
