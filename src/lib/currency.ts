@@ -62,8 +62,15 @@ export function formatAmount(value: number, code: string): string {
 export function formatRate(value: number): string {
   return new Intl.NumberFormat("en", {
     minimumFractionDigits: 2,
-    maximumFractionDigits: 6,
+    maximumFractionDigits: 4,
   }).format(value);
+}
+
+/** Thousands-grouped display for the hero amount while not focused, e.g. "58,506.41". */
+export function formatAmountDisplay(raw: string): string {
+  const value = parseFloat(raw);
+  if (!Number.isFinite(value)) return raw;
+  return value.toLocaleString("en", { maximumFractionDigits: 2 });
 }
 
 /** Plain editable decimal string for an amount re-based after a tap, e.g. "585.06". */

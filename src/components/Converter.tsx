@@ -5,6 +5,7 @@ import type { RatesPayload } from "@/lib/rates";
 import {
   currencyMarker,
   currencyName,
+  formatAmountDisplay,
   formatUpdatedAt,
   sanitizeAmountInput,
   trimToPlainNumber,
@@ -19,6 +20,8 @@ export function Converter() {
   const [rates, setRates] = useState<RatesPayload | null>(null);
   const [ratesError, setRatesError] = useState(false);
   const [pickerOpen, setPickerOpen] = useState(false);
+  const [pickerMode, setPickerMode] = useState<"manage" | "base">("manage");
+  const [amountFocused, setAmountFocused] = useState(false);
 
   // Server + first client paint render the default state, so this rehydration
   // can never cause a visible flash of previously-saved values. localStorage
@@ -82,6 +85,16 @@ export function Converter() {
     });
   }, []);
 
+  const openBasePicker = useCallback(() => {
+    setPickerMode("base");
+    setPickerOpen(true);
+  }, []);
+
+  const openManagePicker = useCallback(() => {
+    setPickerMode("manage");
+    setPickerOpen(true);
+  }, []);
+
   const rows = useMemo(() => {
     if (!rates) return [];
     return state.selected
@@ -96,22 +109,53 @@ export function Converter() {
 
   return (
     <div className="flex flex-1 flex-col gap-8">
-      <header className="flex flex-col gap-1">
-        <label htmlFor="amount" className="text-sm font-medium text-muted">
-          Amount in {currencyName(state.base)}
-        </label>
-        <div className="flex items-baseline gap-3">
-          <span className="text-3xl font-semibold text-muted" aria-hidden>
-            {currencyMarker(state.base)}
-          </span>
-          <input
-            id="amount"
-            inputMode="decimal"
-            autoComplete="off"
-            value={state.amount}
-            onChange={(e) => handleAmountChange(e.target.value)}
-            className="w-full bg-transparent text-6xl font-semibold tabular-nums tracking-tight outline-none"
-          />
+      <header className="flex flex-col gap-5">
+        <div className="flex items-baseline justify-between gap-3">
+          <h1 className="text-sm font-semibold tracking-wide text-muted">Currency</h1>
+          {rates && (
+            <p className="text-right text-xs text-muted">
+              Updated {formatUpdatedAt(rates.updated_at)}
+              {rates.stale ? " · stale" : ""}
+            </p>
+          )}
+        </div>
+
+        <div className="flex flex-col gap-3">
+          <button
+            type="button"
+            onClick={openBasePicker}
+            aria-haspopup="dialog"
+            className="inline-flex w-fit items-center gap-1 rounded-full bg-[var(--surface)] px-3 py-1.5 text-sm font-semibold transition-[background-color,transform] active:scale-[0.97] hover:bg-[var(--surface-hover)]"
+          >
+            {state.base}
+            <svg aria-hidden viewBox="0 0 20 20" className="h-3 w-3 text-muted">
+              <path
+                d="M5 7l5 5 5-5"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.6"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+          </button>
+
+          <div className="flex min-w-0 items-baseline gap-2">
+            <span className="shrink-0 text-xl font-medium text-muted sm:text-2xl" aria-hidden>
+              {currencyMarker(state.base)}
+            </span>
+            <input
+              id="amount"
+              inputMode="decimal"
+              autoComplete="off"
+              aria-label={`Amount in ${currencyName(state.base)}`}
+              value={amountFocused ? state.amount : formatAmountDisplay(state.amount)}
+              onChange={(e) => handleAmountChange(e.target.value)}
+              onFocus={() => setAmountFocused(true)}
+              onBlur={() => setAmountFocused(false)}
+              className="min-w-0 flex-1 bg-transparent text-[clamp(1.6rem,8.5vw,4.5rem)] font-semibold tabular-nums tracking-tight outline-none"
+            />
+          </div>
         </div>
       </header>
 
@@ -124,46 +168,45 @@ export function Converter() {
             Couldn&apos;t load rates. Check your connection and reload.
           </p>
         )}
-        <ul className="flex flex-col divide-y divide-[var(--border)]" aria-live="polite">
-          {rows.map((row) => (
-            <CurrencyRow
-              key={row.code}
-              code={row.code}
-              baseCode={state.base}
-              unitRate={row.unitRate}
-              converted={row.converted}
-              onSetBase={handleSetBase}
-              onRemove={handleRemoveCurrency}
-            />
-          ))}
-        </ul>
+        {rates && rows.length > 0 && (
+          <ul
+            aria-live="polite"
+            className="overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--surface)]"
+          >
+            {rows.map((row, i) => (
+              <CurrencyRow
+                key={row.code}
+                code={row.code}
+                baseCode={state.base}
+                unitRate={row.unitRate}
+                converted={row.converted}
+                index={i}
+                onSetBase={handleSetBase}
+                onRemove={handleRemoveCurrency}
+              />
+            ))}
+          </ul>
+        )}
       </section>
 
       <button
         type="button"
-        onClick={() => setPickerOpen(true)}
+        onClick={openManagePicker}
         className="rounded-xl border border-[var(--border)] px-4 py-3 text-sm font-medium text-muted transition-colors hover:bg-[var(--surface-hover)]"
       >
         Add currency
       </button>
 
-      <footer className="mt-auto pt-6 text-center text-xs text-muted">
-        {rates && (
-          <p>
-            Rates updated {formatUpdatedAt(rates.updated_at)}
-            {rates.stale ? " · showing last known rates" : ""}
-          </p>
-        )}
-      </footer>
-
       <CurrencyPicker
         open={pickerOpen}
+        mode={pickerMode}
         onClose={() => setPickerOpen(false)}
         codes={allCodes}
         selected={state.selected}
         baseCode={state.base}
         onAdd={handleAddCurrency}
         onRemove={handleRemoveCurrency}
+        onSetBase={handleSetBase}
       />
     </div>
   );

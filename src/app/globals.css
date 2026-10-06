@@ -57,6 +57,62 @@ body {
   border-radius: 4px;
 }
 
+@keyframes row-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes value-in {
+  from {
+    opacity: 0.4;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes sheet-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes backdrop-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.animate-row-in {
+  animation: row-in 320ms ease-out both;
+}
+
+.animate-value-in {
+  animation: value-in 180ms ease-out;
+}
+
+dialog[open] {
+  animation: sheet-in 220ms ease-out;
+}
+
+dialog::backdrop {
+  animation: backdrop-in 220ms ease-out;
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
