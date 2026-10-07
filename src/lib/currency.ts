@@ -36,9 +36,9 @@ export function currencyMarker(code: string): string {
       currencyDisplay: "narrowSymbol",
     }).formatToParts(1);
     const symbol = parts.find((p) => p.type === "currency")?.value;
-    return symbol && symbol !== code ? symbol : code.slice(0, 2);
+    return symbol && symbol !== code ? symbol : code;
   } catch {
-    return code.slice(0, 2);
+    return code;
   }
 }
 
