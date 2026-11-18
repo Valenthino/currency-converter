@@ -215,7 +215,7 @@ export function Converter() {
           {rates ? (
             showingCachedOffline ? (
               <>
-                <span className="mr-1.5 inline-block h-1.5 w-1.5 -translate-y-px rounded-full bg-[var(--key-op)] align-middle" />
+                <span className="mr-1.5 inline-block h-1.5 w-1.5 -translate-y-px rounded-full bg-[var(--accent)] align-middle" />
                 Offline · rates from {formatUpdatedAt(rates.updated_at)}
               </>
             ) : (
@@ -293,7 +293,7 @@ export function Converter() {
             onClick={() => rows[0] && handleSetBase(rows[0].code)}
             disabled={!rows[0]}
             aria-label={rows[0] ? `Swap ${state.base} with ${rows[0].code}` : "Swap currencies"}
-            className="mb-2 flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-[var(--key-op)] transition-transform active:scale-90 disabled:opacity-30"
+            className="mb-2 flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-[var(--accent)] transition-transform active:scale-90 disabled:opacity-30"
           >
             <svg aria-hidden viewBox="0 0 24 24" className="h-6 w-6">
               <path

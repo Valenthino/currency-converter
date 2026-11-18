@@ -6,7 +6,7 @@ type KeyDef = {
   label: React.ReactNode;
   aria: string;
   key: Key;
-  kind: "digit" | "fn" | "op";
+  kind: "digit" | "fn" | "op" | "eq";
 };
 
 const BackspaceIcon = (
@@ -41,13 +41,14 @@ const KEYS: KeyDef[] = [
   { label: "+/−", aria: "Change sign", key: { type: "negate" }, kind: "digit" },
   digit("0"),
   digit("."),
-  { label: "=", aria: "Equals", key: { type: "equals" }, kind: "op" },
+  { label: "=", aria: "Equals", key: { type: "equals" }, kind: "eq" },
 ];
 
 const KIND_CLASS: Record<KeyDef["kind"], string> = {
   digit: "bg-[var(--key-digit)] text-[var(--key-digit-fg)]",
   fn: "bg-[var(--key-fn)] text-[var(--key-fn-fg)]",
   op: "bg-[var(--key-op)] text-[var(--key-op-fg)]",
+  eq: "bg-[var(--key-eq)] text-[var(--key-eq-fg)]",
 };
 
 export function Keypad({ onKey, activeOp }: { onKey: (key: Key) => void; activeOp: Op | null }) {
@@ -63,7 +64,7 @@ export function Keypad({ onKey, activeOp }: { onKey: (key: Key) => void; activeO
             aria-pressed={k.key.type === "op" ? active : undefined}
             onClick={() => onKey(k.key)}
             className={`keypad-key flex h-[var(--key-h)] select-none items-center justify-center rounded-full text-[clamp(1.5rem,7vw,2.1rem)] font-normal tabular-nums transition-[background-color,color,filter,transform] duration-150 active:scale-[0.96] active:brightness-125 ${
-              active ? "bg-[var(--key-op-fg)] text-[var(--key-op)]" : KIND_CLASS[k.kind]
+              active ? "bg-[var(--key-eq)] text-[var(--key-eq-fg)]" : KIND_CLASS[k.kind]
             } ${k.kind === "fn" && typeof k.label === "string" && k.label.length > 1 ? "text-[clamp(1.25rem,5.6vw,1.75rem)]" : ""}`}
           >
             {k.label}
