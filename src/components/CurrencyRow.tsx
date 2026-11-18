@@ -14,12 +14,12 @@ export function CurrencyRow({
   code: string;
   baseCode: string;
   unitRate: number;
-  converted: number;
+  converted: number | null;
   index: number;
   onSetBase: (code: string) => void;
   onRemove: (code: string) => void;
 }) {
-  const formatted = formatAmount(converted, code);
+  const formatted = converted === null ? "—" : formatAmount(converted, code);
 
   return (
     <li className="animate-row-in relative" style={{ animationDelay: `${index * 40}ms` }}>
@@ -28,7 +28,7 @@ export function CurrencyRow({
         <button
           type="button"
           onClick={() => onSetBase(code)}
-          className="group flex min-w-0 flex-1 items-center justify-between gap-3 px-4 py-3 text-left transition-[background-color,transform] active:scale-[0.99] hover:bg-[var(--surface-hover)]"
+          className="group flex min-w-0 flex-1 items-center justify-between gap-3 px-4 py-2.5 text-left transition-[background-color,transform] active:scale-[0.99] hover:bg-[var(--surface-hover)]"
           aria-label={`Make ${code} the base currency`}
         >
           <span className="flex min-w-0 flex-1 items-center gap-2">
