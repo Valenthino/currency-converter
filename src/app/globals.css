@@ -7,8 +7,19 @@
   --foreground: #1d1d1f;
   --muted: #6e6e73;
   --border: rgba(0, 0, 0, 0.08);
-  --accent: #ff9f0a;
+  --accent: #c47a2c;
   --accent-foreground: #1d1d1f;
+  /* Keypad — Apple-calculator layout in quiet colours: operators are a soft
+     tinted surface with an amber glyph; only "=" carries a muted amber fill. */
+  --key-digit: #ffffff;
+  --key-digit-fg: #1d1d1f;
+  --key-fn: #e3e3e8;
+  --key-fn-fg: #1d1d1f;
+  --key-op: #f3ebe1;
+  --key-op-fg: #b06b22;
+  --key-eq: #c98a45;
+  --key-eq-fg: #ffffff;
+  --key-h: clamp(50px, min(19vw, 8.4dvh), 84px);
 }
 
 @theme inline {
@@ -32,13 +43,28 @@
     --foreground: #f5f5f7;
     --muted: #98989d;
     --border: rgba(255, 255, 255, 0.1);
-    --accent: #ff9f0a;
+    --accent: #d99a55;
     --accent-foreground: #000000;
+    --key-digit: #2c2c2e;
+    --key-digit-fg: #f5f5f7;
+    --key-fn: #48484b;
+    --key-fn-fg: #f5f5f7;
+    --key-op: #3a3530;
+    --key-op-fg: #e3a862;
+    --key-eq: #b8803f;
+    --key-eq-fg: #ffffff;
   }
 }
 
 html {
   color-scheme: light dark;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.keypad-key {
+  touch-action: manipulation;
+  -webkit-user-select: none;
+  user-select: none;
 }
 
 body {

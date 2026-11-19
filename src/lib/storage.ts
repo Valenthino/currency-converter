@@ -25,7 +25,7 @@ function sanitizeSelected(value: unknown): string[] {
 function sanitizeAmount(value: unknown): string {
   if (typeof value !== "string") return DEFAULT_AMOUNT;
   const cleaned = sanitizeAmountInput(value);
-  return cleaned !== "" && Number.isFinite(parseFloat(cleaned)) ? cleaned : DEFAULT_AMOUNT;
+  return cleaned !== "" && cleaned !== "-" && Number.isFinite(parseFloat(cleaned)) ? cleaned : DEFAULT_AMOUNT;
 }
 
 export function defaultState(): StoredState {
